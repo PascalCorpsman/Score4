@@ -177,9 +177,10 @@ Begin
     End;
     inc(testsDid);
   End;
-  writeln('All tests passed.');
   writeln(format('Ran %d tests', [testsDid]));
   writeln(format('Ran %d games', [gamesDid]));
+  writeln('');
+  writeln('All tests passed.');
   DutProcess.free;
   Tests.free;
 End;

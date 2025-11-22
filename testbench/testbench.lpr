@@ -94,11 +94,6 @@ Begin
   End;
 End;
 
-(*
- * result.x = returncode of DUT
- * result.y = move
- *)
-
 Function RunDut(): TRunResult;
 Var
   j, i: Integer;

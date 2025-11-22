@@ -31,12 +31,6 @@ Begin
     result := FalseVal;
 End;
 
-Function Inside(y, x: Integer): Boolean;
-Begin
-  Result := (y >= 0) And (y < HEIGHT) And (x >= 0) And (x < WIDTH);
-End;
-
-
 Function ScoreBoard(Const scores: TBoard): Integer;
 Var
   counters: Array[0..8] Of Integer;
@@ -92,7 +86,6 @@ Begin
       counters[3] - 2 * counters[2] - 5 * counters[1];
 End;
 
-
 Function DropDisk(Var board: TBoard; column, color: Integer): Integer;
 Var
   y: Integer;
@@ -106,8 +99,17 @@ Begin
   Result := -1;
 End;
 
+(*
+ * Dieser Code liest die Parameter der Anwendung aus und initialisiert damit das
+ * Board.
+ * Es finden so gut wie keine Checks statt, alle Parameter müssen also alle der
+ * Form: "pcr" sein mit
+ *   p in [ 'o', 'y' ]
+ *   c in [ 0 .. 5 ]
+ *   r in [ 0 .. 6 ]
+ *)
 
-Procedure LoadBoard(argc: Integer; Var board: TBoard);
+Procedure LoadBoard(Var board: TBoard);
 Var
   i: Integer;
   arg: String;
@@ -115,8 +117,7 @@ Begin
   For i := 1 To ParamCount Do Begin
     arg := ParamStr(i);
     If (Length(arg) >= 3) And ((arg[1] = 'o') Or (arg[1] = 'y')) Then Begin
-      board[Ord(arg[2]) - Ord('0')][Ord(arg[3]) - Ord('0')] :=
-        IfThen(arg[1] = 'o', ORANGE, YELLOW);
+      board[Ord(arg[2]) - Ord('0')][Ord(arg[3]) - Ord('0')] := IfThen(arg[1] = 'o', ORANGE, YELLOW);
     End
     Else If arg = '-debug' Then
       g_debug := 1
@@ -203,16 +204,15 @@ Begin
   score := bestScore;
 End;
 
-
 Var
   board: TBoard;
   scoreOrig: Integer;
   move, score: Integer;
 
 Begin
-  FillChar(board, SizeOf(board), 0);
+  FillChar(board, SizeOf(board), BARREN);
 
-  LoadBoard(ParamCount + 1, board);
+  LoadBoard(board);
 
   scoreOrig := ScoreBoard(board);
 

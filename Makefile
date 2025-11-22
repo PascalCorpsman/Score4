@@ -81,7 +81,13 @@ all:
 	@echo "        to play a console game of score4"
 	@echo 
 	@echo "    make benchmark"
-	@echo "        to benchmark implementations (C/C++/Java/OCaml/Lisp/F#/C#)"
+	@echo "        to benchmark implementations (C/C++/Java/OCaml/Lisp/F#/C#/FPC)"
+	@echo 
+	@echo "    make testbench_record RUNS=10"
+	@echo "        to build the testsystem and record 10 games for testing"
+	@echo 
+	@echo "    make testbench_test DUT=C/score4"
+	@echo "        to run the testsystem against C/score4 executable"
 	@echo 
 
 play:
@@ -103,3 +109,31 @@ benchmark:
 
 clean:
 	for f in ${DIRS} ; do make -C "$$f" clean ; done
+	@make -C testbench clean
+
+testbench_test:
+	@if [ -z "$(FPC_EXISTS)" ]; then \
+		echo "Error: FreePascal (fpc) not found. Cannot run testbench test."; \
+		exit 1; \
+	elif [ ! -f testbench/c_record.txt ]; then \
+		echo "File testbench/c_record.txt not found. Run 'make testbench_record' first."; \
+		exit 1; \
+	else \
+		echo "Building C implementation first..."; \
+		make -C C all; \
+		echo "Running testbench test..."; \
+		make -C testbench test DUT=$(DUT); \
+	fi
+
+
+testbench_record:
+ifeq ($(FPC_EXISTS),)
+	@echo "Error: FreePascal (fpc) not found. Cannot run testbench record."
+	@exit 1
+else
+	@echo "Running testbench record..."
+	@make -C C all
+	@make -C testbench record RUNS=$(RUNS)
+endif
+
+

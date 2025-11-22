@@ -23,28 +23,22 @@ Var
 Type
   TBoard = Array[0..HEIGHT - 1, 0..WIDTH - 1] Of Integer;
 
-Function IfThen(cond: Boolean; TrueVal, FalseVal: integer): integer;
-Begin
-  If cond Then
-    result := TrueVal
-  Else
-    result := FalseVal;
-End;
-
 Function ScoreBoard(Const scores: TBoard): Integer;
 Var
   counters: Array[0..8] Of Integer;
   x, y, score, idx: Integer;
+  scoresYPointer: PInteger;
 Begin
   FillChar(counters, SizeOf(counters), 0);
 
   // Horizontal spans
   For y := 0 To HEIGHT - 1 Do Begin
     score := scores[y][0] + scores[y][1] + scores[y][2];
+    scoresYPointer := @scores[y];
     For x := 3 To WIDTH - 1 Do Begin
-      score := score + scores[y][x];
+      score := score + scoresYPointer[x];
       Inc(counters[score + 4]);
-      score := score - scores[y][x - 3];
+      score := score - scoresYPointer[x - 3];
     End;
   End;
 
@@ -117,7 +111,12 @@ Begin
   For i := 1 To ParamCount Do Begin
     arg := ParamStr(i);
     If (Length(arg) >= 3) And ((arg[1] = 'o') Or (arg[1] = 'y')) Then Begin
-      board[Ord(arg[2]) - Ord('0')][Ord(arg[3]) - Ord('0')] := IfThen(arg[1] = 'o', ORANGE, YELLOW);
+      If arg[1] = 'o' Then Begin
+        board[Ord(arg[2]) - Ord('0')][Ord(arg[3]) - Ord('0')] := ORANGE;
+      End
+      Else Begin
+        board[Ord(arg[2]) - Ord('0')][Ord(arg[3]) - Ord('0')] := YELLOW;
+      End;
     End
     Else If arg = '-debug' Then
       g_debug := 1
@@ -138,7 +137,7 @@ Var
   bestScore, bestMove: Integer;
   column: Integer;
   rowFilled: Integer;
-  s: Integer;
+  s, t: Integer;
   moveInner, scoreInner: Integer;
   newColor: Integer;
 Begin
@@ -158,8 +157,11 @@ Begin
       continue;
 
     s := ScoreBoard(board);
-
-    If s = IfThen(maximize <> 0, ORANGE_WINS, YELLOW_WINS) Then Begin
+    If maximize <> 0 Then
+      t := ORANGE_WINS
+    Else
+      t := YELLOW_WINS;
+    If s = t Then Begin
       bestMove := column;
       bestScore := s;
       board[rowFilled][column] := BARREN;

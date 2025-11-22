@@ -2,8 +2,13 @@ TARGETS=score4
 
 all:	$(TARGETS)
 
+# Optimiere aggressiv und schalte Range/Overflow-Checks ab
+FPCFLAGS = -O3 -Cr- -Co-
+
+all: $(TARGETS)
+
 score4: score4.lpr
-	fpc -o$@ $<
+	fpc $(FPCFLAGS) -o$@ $<
 
 clean:
 	@rm -rf $(TARGETS)

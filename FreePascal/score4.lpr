@@ -1,6 +1,8 @@
 Program score4;
 
-{$MODE objfpc}{$H+}
+{$INLINE ON}
+{$MODE DELPHI} // bessere Pointerarithmetik
+{$R-,Q-,S-} // Range-, Overflow-, Stack-Checks aus
 
 Uses
   SysUtils;
@@ -24,61 +26,105 @@ Type
   TBoard = Array[0..HEIGHT - 1, 0..WIDTH - 1] Of Integer;
 
 Function ScoreBoard(Const scores: TBoard): Integer;
+Const
+  // Konstanten sind bereits gegeben, WIDTH=7, HEIGHT=6
+  DIAG_DR_STEP = WIDTH + 1; // down-right step in linearized array
+  DIAG_UR_STEP = -WIDTH + 1; // up-right step in linearized array
 Var
+  base: PInteger; // pointer auf scores[0][0]
   counters: Array[0..8] Of Integer;
-  x, y, score, idx: Integer;
-  scoresYPointer: PInteger;
+  y, x: Integer;
+  score: Integer;
+  p, q, r: PInteger;
+  diagStep: Integer;
 Begin
+  // zero counters fast
   FillChar(counters, SizeOf(counters), 0);
 
-  // Horizontal spans
+  // base pointer auf erstes Element
+  base := @scores[0][0];
+
+  // ---------------------------
+  // Horizontal rolling windows
+  // ---------------------------
   For y := 0 To HEIGHT - 1 Do Begin
-    score := scores[y][0] + scores[y][1] + scores[y][2];
-    scoresYPointer := @scores[y];
+    // p zeigt auf scores[y][0]
+    p := base + (y * WIDTH);
+    // initial 3-sum (positions 0,1,2)
+    score := p[0] + p[1] + p[2];
+    // slide window along row: add p[x] (x from 3..WIDTH-1), remove p[x-3]
     For x := 3 To WIDTH - 1 Do Begin
-      score := score + scoresYPointer[x];
+      score := score + p[x];
       Inc(counters[score + 4]);
-      score := score - scoresYPointer[x - 3];
+      score := score - p[x - 3];
     End;
   End;
 
-  // Vertical spans
+  // ---------------------------
+  // Vertical rolling windows
+  // ---------------------------
+  // For each column, p starts at base + x (row 0) and we step by WIDTH to go down
   For x := 0 To WIDTH - 1 Do Begin
-    score := scores[0][x] + scores[1][x] + scores[2][x];
+    p := base + x; // points to [0,x]
+    // initial sum of first 3 rows in this column: rows 0,1,2
+    score := p[0] + p[WIDTH] + p[2 * WIDTH];
+    q := p + 3 * WIDTH; // q points to row 3 in this column
     For y := 3 To HEIGHT - 1 Do Begin
-      score := score + scores[y][x];
+      score := score + q^; // add current row y
       Inc(counters[score + 4]);
-      score := score - scores[y - 3][x];
+      score := score - p^; // remove oldest (row y-3)
+      Inc(p, WIDTH); // move p to next row (oldest+1)
+      Inc(q, WIDTH); // move q to next row (current+1)
     End;
   End;
 
-  // Down-right diagonals
+  // ---------------------------
+  // Down-right diagonals ( \ )
+  // Only start positions where a length-4 diagonal fits:
+  // y in [0..HEIGHT-4], x in [0..WIDTH-4]
+  // ---------------------------
+  diagStep := DIAG_DR_STEP;
   For y := 0 To HEIGHT - 4 Do
     For x := 0 To WIDTH - 4 Do Begin
-      score := 0;
-      For idx := 0 To 3 Do
-        score := score + scores[y + idx][x + idx];
+      p := base + (y * WIDTH + x);
+      // load four diagonal elements at offsets 0, diagStep, 2*diagStep, 3*diagStep
+      score := p[0] + p[diagStep] + p[2 * diagStep] + p[3 * diagStep];
       Inc(counters[score + 4]);
     End;
 
-  // Up-right diagonals
+  // ---------------------------
+  // Up-right diagonals ( / )
+  // Start positions: y in [3..HEIGHT-1], x in [0..WIDTH-4]
+  // step is (-WIDTH + 1)
+  // ---------------------------
+  diagStep := DIAG_UR_STEP;
   For y := 3 To HEIGHT - 1 Do
     For x := 0 To WIDTH - 4 Do Begin
-      score := 0;
-      For idx := 0 To 3 Do
-        score := score + scores[y - idx][x + idx];
+      p := base + (y * WIDTH + x);
+      // offsets: 0, diagStep, 2*diagStep, 3*diagStep (diagStep negative)
+      score := p[0] + p[diagStep] + p[2 * diagStep] + p[3 * diagStep];
       Inc(counters[score + 4]);
     End;
 
-  If counters[0] <> 0 Then
-    Result := YELLOW_WINS
-  Else If counters[8] <> 0 Then
-    Result := ORANGE_WINS
-  Else
-    Result :=
-      counters[5] + 2 * counters[6] + 5 * counters[7] -
-      counters[3] - 2 * counters[2] - 5 * counters[1];
+  // ---------------------------
+  // Schnellcheck auf sofortigen Sieg (early returns)
+  // counters[0] corresponds to score = -4 (YELLOW), counters[8] to +4 (ORANGE)
+  // ---------------------------
+  If counters[0] <> 0 Then Begin
+    Result := YELLOW_WINS;
+    Exit;
+  End;
+
+  If counters[8] <> 0 Then Begin
+    Result := ORANGE_WINS;
+    Exit;
+  End;
+
+  // Heuristik: gleiche wie vorher
+  Result := counters[5] + 2 * counters[6] + 5 * counters[7]
+    - counters[3] - 2 * counters[2] - 5 * counters[1];
 End;
+
 
 Function DropDisk(Var board: TBoard; column, color: Integer): Integer;
 Var

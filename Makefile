@@ -10,6 +10,11 @@ ifneq ($(GCC_EXISTS),)
 DIRS:=$(DIRS) C
 endif
 
+FPC_EXISTS=$(shell which fpc)
+ifneq ($(GCC_EXISTS),)
+DIRS:=$(DIRS) FreePascal
+endif
+
 DMD_EXISTS=$(shell which dmd)
 ifneq ($(DMD_EXISTS),)
 DIRS:=$(DIRS) D

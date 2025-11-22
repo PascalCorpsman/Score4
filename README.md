@@ -28,6 +28,15 @@ To fiddle with the sources:
 
     make benchmark
 
+6. To validate one build against a other build
+   1. Build the testresults to test against
+
+      make testbench_record RUNS=10
+
+   2. Call the testsystem to test against the testresults (the example tests against the C version)
+
+      make testbench_test DUT=C/score4
+
 These are the results I get on my Celeron E3400 under Arch Linux:
 
     ======================

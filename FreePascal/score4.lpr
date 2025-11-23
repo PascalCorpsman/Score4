@@ -25,7 +25,7 @@ Var
 Type
   TBoard = Array[0..HEIGHT - 1, 0..WIDTH - 1] Of Integer;
 
-Function ScoreBoard(Const scores: TBoard): Integer;
+Function ScoreBoard(Const scores: TBoard): Integer Inline;
 Const
   // Konstanten sind bereits gegeben, WIDTH=7, HEIGHT=6
   DIAG_DR_STEP = WIDTH + 1; // down-right step in linearized array
@@ -35,7 +35,7 @@ Var
   counters: Array[0..8] Of Integer;
   y, x: Integer;
   score: Integer;
-  p, q, r: PInteger;
+  p, q: PInteger;
   diagStep: Integer;
 Begin
   // zero counters fast
@@ -125,16 +125,18 @@ Begin
     - counters[3] - 2 * counters[2] - 5 * counters[1];
 End;
 
-
-Function DropDisk(Var board: TBoard; column, color: Integer): Integer;
+Function DropDisk(Var board: TBoard; column, color: Integer): Integer Inline;
 Var
+  p: PInteger;
   y: Integer;
 Begin
+  p := @board[HEIGHT - 1][column]; // Start ganz unten
   For y := HEIGHT - 1 Downto 0 Do Begin
-    If board[y][column] = BARREN Then Begin
-      board[y][column] := color;
+    If p^ = BARREN Then Begin
+      p^ := color;
       Exit(y);
     End;
+    Dec(p, WIDTH);
   End;
   Result := -1;
 End;
@@ -172,7 +174,7 @@ Begin
 End;
 
 Procedure abMinimax(
-  maximize: Integer;
+  maximize: boolean;
   color: Integer;
   depth: Integer;
   Var board: TBoard;
@@ -187,10 +189,10 @@ Var
   moveInner, scoreInner: Integer;
   newColor: Integer;
 Begin
-  If maximize <> 0 Then
-    bestScore := -10000000
+  If maximize Then
+    bestScore := YELLOW_WINS * 100
   Else
-    bestScore := 10000000;
+    bestScore := ORANGE_WINS * 100;
 
   bestMove := -1;
 
@@ -203,7 +205,7 @@ Begin
       continue;
 
     s := ScoreBoard(board);
-    If maximize <> 0 Then
+    If maximize Then
       t := ORANGE_WINS
     Else
       t := YELLOW_WINS;
@@ -219,7 +221,7 @@ Begin
         newColor := YELLOW
       Else
         newColor := ORANGE;
-      abMinimax(Ord(maximize = 0), newColor, depth - 1, board, moveInner, scoreInner);
+      abMinimax(Not maximize, newColor, depth - 1, board, moveInner, scoreInner);
     End
     Else Begin
       moveInner := -1;
@@ -234,7 +236,7 @@ Begin
     If (depth = g_maxDepth) And (g_debug <> 0) Then
       WriteLn('Depth ', depth, ', placing on ', column, ', score: ', scoreInner);
 
-    If maximize <> 0 Then Begin
+    If maximize Then Begin
       If (scoreInner >= bestScore) Then Begin
         bestScore := scoreInner;
         bestMove := column;
@@ -254,9 +256,7 @@ End;
 
 Var
   board: TBoard;
-  scoreOrig: Integer;
-  move, score: Integer;
-
+  scoreOrig, move, score: Integer;
 Begin
   FillChar(board, SizeOf(board), BARREN);
 
@@ -273,7 +273,7 @@ Begin
     Halt(-1);
   End
   Else Begin
-    abMinimax(1, ORANGE, g_maxDepth, board, move, score);
+    abMinimax(True, ORANGE, g_maxDepth, board, move, score);
 
     If move <> -1 Then Begin
       WriteLn(move);

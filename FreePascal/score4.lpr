@@ -178,16 +178,17 @@ Procedure abMinimax(
   color: Integer;
   depth: Integer;
   Var board: TBoard;
+  alpha, beta: Integer;
   Out move: Integer;
   Out score: Integer
   );
 Var
   bestScore, bestMove: Integer;
-  column: Integer;
   rowFilled: Integer;
   s, t: Integer;
   moveInner, scoreInner: Integer;
-  newColor: Integer;
+  newColor, column: Integer;
+  localAlpha, localBeta: Integer;
 Begin
   If maximize Then
     bestScore := YELLOW_WINS * 100
@@ -210,18 +211,18 @@ Begin
     Else
       t := YELLOW_WINS;
     If s = t Then Begin
-      bestMove := column;
-      bestScore := s;
+      Move := column;
+      Score := s;
       board[rowFilled][column] := BARREN;
-      break;
+      exit;
     End;
 
     If depth > 1 Then Begin
-      If color = ORANGE Then
-        newColor := YELLOW
-      Else
-        newColor := ORANGE;
-      abMinimax(Not maximize, newColor, depth - 1, board, moveInner, scoreInner);
+      newColor := -color;
+      // Storing the Data "Local" reduces Execution time
+      localAlpha := alpha;
+      localBeta := beta;
+      abMinimax(Not maximize, newColor, depth - 1, board, localAlpha, localBeta, moveInner, scoreInner);
     End
     Else Begin
       moveInner := -1;
@@ -236,6 +237,7 @@ Begin
     If (depth = g_maxDepth) And (g_debug <> 0) Then
       WriteLn('Depth ', depth, ', placing on ', column, ', score: ', scoreInner);
 
+    {-- "Normal" Code without Alpha-Beta-Pruning
     If maximize Then Begin
       If (scoreInner >= bestScore) Then Begin
         bestScore := scoreInner;
@@ -248,8 +250,33 @@ Begin
         bestMove := column;
       End;
     End;
-  End;
+    // End "Normal" }
 
+    //{ -- "With Alpha-Beta-Pruning", don't know if this is cheating ;)
+    If maximize Then Begin
+      If (scoreInner >= bestScore) Then Begin
+        bestScore := scoreInner;
+        bestMove := column;
+      End;
+      If bestScore > beta Then Begin
+        move := bestMove;
+        break;
+      End;
+      If bestScore > alpha Then alpha := bestScore;
+    End
+    Else Begin
+      If (scoreInner <= bestScore) Then Begin
+        bestScore := scoreInner;
+        bestMove := column;
+      End;
+      If bestScore < alpha Then Begin
+        move := bestMove;
+        break;
+      End;
+      If bestScore < beta Then beta := bestScore;
+    End;
+    // End "With Alpha-Beta-Pruning"}
+  End;
   move := bestMove;
   score := bestScore;
 End;
@@ -273,7 +300,7 @@ Begin
     Halt(-1);
   End
   Else Begin
-    abMinimax(True, ORANGE, g_maxDepth, board, move, score);
+    abMinimax(True, ORANGE, g_maxDepth, board, YELLOW_WINS * 100, ORANGE_WINS * 100, move, score);
 
     If move <> -1 Then Begin
       WriteLn(move);
